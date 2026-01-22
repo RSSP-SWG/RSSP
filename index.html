@@ -1628,6 +1628,7 @@
       }
     }
     // Toggle checklist item
+    // Toggle checklist item
     function toggleChecklistItem(id) {
       checklist[id] = !checklist[id];
       saveChecklist();
@@ -1641,6 +1642,22 @@
         }, 500);
       }
     }
+
+    // Toggle favorite
+    function toggleFavorite(id) {
+      console.log('Toggling favorite:', id, 'Current favorites:', favorites);
+      const index = favorites.indexOf(id);
+      if (index === -1) {
+        favorites.push(id);
+      } else {
+        favorites.splice(index, 1);
+      }
+      console.log('New favorites:', favorites);
+      saveFavorites();
+      renderExplore();
+    }
+
+    // Update progress
 
     // Update progress
     function updateProgress() {
