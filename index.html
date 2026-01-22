@@ -1619,16 +1619,58 @@
       }
     }
 
-    // Toggle favorite
-    function toggleFavorite(id) {
-      if (favorites.includes(id)) {
-        favorites = favorites.filter(f => f !== id);
-      } else {
-        favorites.push(id);
+    // Updated toggle function
+function toggleFavorite(id) {
+  const index = favorites.indexOf(id);
+  if (index === -1) {
+    favorites.push(id);
+  } else {
+    favorites.splice(index, 1);
+  }
+  saveFavorites(); // Ensure this is called
+  renderExplore();
+}
+
+// Updated save function using localStorage for better persistence
+async function saveFavorites() {
+  if (mounted) {
+    try {
+      // Use standard localStorage as a fallback or primary
+      localStorage.setItem('favorites', JSON.stringify(favorites));
+      
+      // Keep your existing storage call if required by your platform
+      if (window.storage) {
+        await window.storage.set('favorites', JSON.stringify(favorites));
       }
-      saveFavorites();
-      renderExplore();
+    } catch (e) {
+      console.error('Could not save favorites:', e);
     }
+  }
+}
+
+// Updated load function to check localStorage
+async function loadData() {
+  try {
+    // 1. Try platform storage first
+    let favData = await window.storage?.get('favorites').catch(() => null);
+    
+    // 2. Fallback to localStorage if platform storage is empty
+    if (!favData?.value) {
+      const localData = localStorage.getItem('favorites');
+      if (localData) favorites = JSON.parse(localData);
+    } else {
+      favorites = JSON.parse(favData.value);
+    }
+    
+    // ... rest of your loading logic for checklist and language
+  } catch (error) {
+    console.log('Error loading data:', error);
+  }
+  mounted = true;
+  updateProgress();
+  renderChecklist();
+  renderExplore();
+}
 
     // Update progress
     function updateProgress() {
@@ -1711,11 +1753,16 @@
         <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 relative overflow-hidden group">
           <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-teal-100 to-blue-100 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
           
-          <button onclick="toggleFavorite('${place.id}')" class="absolute top-4 right-4 z-10 p-3 rounded-full bg-white shadow-lg hover:scale-110 transition-transform">
-            <svg class="w-6 h-6 ${favorites.includes(place.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}" fill="${favorites.includes(place.id) ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-            </svg>
-          </button>
+          <button onclick="toggleFavorite('${place.id}')" 
+        class="absolute top-3 right-3 z-30 p-3 rounded-full bg-white/90 shadow-md hover:bg-white transition-all active:scale-90"
+        aria-label="Toggle Favorite">
+  <svg class="w-6 h-6 ${favorites.includes(place.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'}" 
+       fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+    </path>
+  </svg>
+</button>
 
           <div class="relative z-10">
             <h3 class="text-xl font-bold text-gray-800 mb-3 pr-8">${place.name}</h3>
