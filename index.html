@@ -1561,49 +1561,72 @@
     let activeTab = 'parks';
     let mounted = false;
 
-    // Load data from storage
+     // Load data from storage
     async function loadData() {
       try {
-        const checklistData = await window.storage.get('checklist').catch(() => null);
-        const favData = await window.storage.get('favorites').catch(() => null);
-        const langData = await window.storage.get('language').catch(() => null);
-
-        if (checklistData?.value) checklist = JSON.parse(checklistData.value);
-        if (favData?.value) favorites = JSON.parse(favData.value);
-        if (langData?.value) {
-          document.getElementById('languageSelect').value = langData.value;
+        // 1. Load Checklist from localStorage first
+        const savedChecklist = localStorage.getItem('checklist');
+        if (savedChecklist) {
+          checklist = JSON.parse(savedChecklist);
+        } else if (window.storage) {
+          // Fallback to platform storage
+          const platformData = await window.storage.get('checklist').catch(() => null);
+          if (platformData?.value) checklist = JSON.parse(platformData.value);
         }
+    
+        // 2. Load Favorites from localStorage first
+        const savedFavs = localStorage.getItem('favorites');
+        if (savedFavs) {
+          favorites = JSON.parse(savedFavs);
+        } else if (window.storage) {
+          const platformFavs = await window.storage.get('favorites').catch(() => null);
+          if (platformFavs?.value) favorites = JSON.parse(platformFavs.value);
+        }
+        
+        // Ensure checklist is at least an empty object if loading failed
+        if (!checklist) checklist = {};
+        if (!favorites) favorites = [];
+    
       } catch (error) {
-        console.log('First time visitor - welcome!');
+        console.log('Error loading data:', error);
+        checklist = {};
+        favorites = [];
       }
+      
       mounted = true;
-      updateProgress();
       renderChecklist();
       renderExplore();
+      updateProgress();
     }
-
-    // Save checklist
+    
+    // Save checklist to both localStorage and platform storage
     async function saveChecklist() {
       if (mounted) {
-        try {
-          await window.storage.set('checklist', JSON.stringify(checklist));
-        } catch (e) {
-          console.log('Could not save checklist');
+        const data = JSON.stringify(checklist);
+        // Always save to localStorage immediately
+        localStorage.setItem('checklist', data);
+        
+        // Also try platform storage if available
+        if (window.storage) {
+          try {
+            await window.storage.set('checklist', data);
+          } catch (e) { console.log('Platform save failed'); }
         }
       }
     }
-
-    // Save favorites
+    
+    // Save favorites to both localStorage and platform storage
     async function saveFavorites() {
       if (mounted) {
-        try {
-          await window.storage.set('favorites', JSON.stringify(favorites));
-        } catch (e) {
-          console.log('Could not save favorites');
+        const data = JSON.stringify(favorites);
+        localStorage.setItem('favorites', data);
+        if (window.storage) {
+          try {
+            await window.storage.set('favorites', data);
+          } catch (e) { console.log('Platform save failed'); }
         }
       }
     }
-
     // Toggle checklist item
     function toggleChecklistItem(id) {
       checklist[id] = !checklist[id];
@@ -1618,59 +1641,6 @@
         }, 500);
       }
     }
-
-    // Updated toggle function
-function toggleFavorite(id) {
-  const index = favorites.indexOf(id);
-  if (index === -1) {
-    favorites.push(id);
-  } else {
-    favorites.splice(index, 1);
-  }
-  saveFavorites(); // Ensure this is called
-  renderExplore();
-}
-
-// Updated save function using localStorage for better persistence
-async function saveFavorites() {
-  if (mounted) {
-    try {
-      // Use standard localStorage as a fallback or primary
-      localStorage.setItem('favorites', JSON.stringify(favorites));
-      
-      // Keep your existing storage call if required by your platform
-      if (window.storage) {
-        await window.storage.set('favorites', JSON.stringify(favorites));
-      }
-    } catch (e) {
-      console.error('Could not save favorites:', e);
-    }
-  }
-}
-
-// Updated load function to check localStorage
-async function loadData() {
-  try {
-    // 1. Try platform storage first
-    let favData = await window.storage?.get('favorites').catch(() => null);
-    
-    // 2. Fallback to localStorage if platform storage is empty
-    if (!favData?.value) {
-      const localData = localStorage.getItem('favorites');
-      if (localData) favorites = JSON.parse(localData);
-    } else {
-      favorites = JSON.parse(favData.value);
-    }
-    
-    // ... rest of your loading logic for checklist and language
-  } catch (error) {
-    console.log('Error loading data:', error);
-  }
-  mounted = true;
-  updateProgress();
-  renderChecklist();
-  renderExplore();
-}
 
     // Update progress
     function updateProgress() {
